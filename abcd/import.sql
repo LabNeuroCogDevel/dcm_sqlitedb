@@ -3,3 +3,6 @@
 
 .separator "	"
 .import data/abcd_mot.txt motion
+
+.separator "	"
+.import data/demo_EXTrisk.txt extrisk

@@ -30,6 +30,10 @@ create table motion (
      title  text,
      value  numeric
 );
+create table extrisk (
+     id     char(20),
+     value  numeric
+);
 
 create TABLE mrinfo (
     
