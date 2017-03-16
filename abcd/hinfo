@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+
+# give me a directory with dicoms 
+# or a specific dicom
+# i'll give you info on that dicom
+
+#  dicom_hdr /Volumes/Phillips/Raw/MRprojects/mMRDA-dev/2016.05.13-16.01.32/11544_20160513/tfl_MT_128x96.3/MR.1.3.12.2.1107.5.2.38.51021.2016051316342412770110714 > ~/junk
+# echo '0008,0013 0008,0032 0018,1030 0008,1070 0028,0030 0008,0020 0018,1312 0051,100e 0018,0080 0018,0081 0018,1314 0028,0010 0028,0011 0018,0089 0051,100f 0018,1310 0018,1020)' |tr ' ' '\n' | tr ',' ' '|xargs -n 2 -I{} grep '{}' junk
+
+# 0010 0020       14 [1326    ] //                 PAT Patient ID//11544_20160513
+# 0010 0030        8 [1348    ] //          PAT Patient Birthdate//19991020
+# 0010 0040        2 [1364    ] //                PAT Patient Sex//F
+# 0008 0020        8 [544     ] //                  ID Study Date//20160513
+# 0008 0032       14 [652     ] //            ID Acquisition Time//163210.985000 
+# 0018 1030        6 [1690    ] //              ACQ Protocol Name//tfl_MT
+# 0008 1070        4 [954     ] //             ID Operator's Name//TOM 
+# 0028 0030       18 [2424    ] //              IMG Pixel Spacing//1.796875\1.796875 
+# 0018 1312        4 [1732    ] //   ACQ Phase Encoding Direction//ROW 
+# 0051 100e        4 [115432  ] //                               //Tra                # (thing1)
+# 0018 0080        4 [1518    ] //            ACQ Repetition Time//3000
+# 0018 0081        4 [1530    ] //                  ACQ Echo Time//1.59
+# 0018 1314        2 [1744    ] //                 ACQ Flip Angle//8 
+# 0028 0010        2 [2404    ] //                       IMG Rows// 128
+# 0028 0011        2 [2414    ] //                    IMG Columns// 96
+# 0018 0089        2 [1600    ] //ACQ Number of Phase Encoding Steps//71
+# 0051 100f       18 [115444  ] //                               //T:HEA;HEP;NEA;NEP  # (thing2)
+# 0018 1020                     //        software
+# 0018 1310        8 [1716    ] //         ACQ Acquisition Matrix// 0 128 96 0
+
+
+hinfo(){
+ (
+  dicom_hinfo -tag 0010,0020 0010,0030 0010,0040 0008,0020 0008,0032 0018,1030 0008,1070 0028,0030 0018,1312 0051,100e 0018,0080 0018,0081 0018,1314 0028,0010 0028,0011 0018,0089 0051,100f $1 | cut -d' ' -f2-
+
+  #sofware 0018,1020 and ACQ Acquisition Matrix 0018,1310 have spaces and are not printed correctly!
+  #grab them from from the long list and "fix" them
+  dicom_hdr $1 |egrep '^0018 (1310|1020)'|cut -d/ -f5|sed s:\ :/:g | perl -slane 'print print(join "\t", map {$_||"null"} @F[0..1])'
+ ) | tr "\n" " " 
+}
+
+dcmindir() {
+ find $1 -maxdepth 1 -type f -not -iname 'need_*' |sed 1q  
+}
+
+
+# PAT Patient ID|PAT Patient Birthdate|PAT Patient Sex|ID Study Date|ID Acquisition Time|ACQ Protocol Name|ID Operator's Name|IMG Pixel Spacing|ACQ Phase Encoding Direction|thing1 |ACQ Repetition Time|ACQ Echo Time|ACQ Flip Angle|IMG Rows|IMG Columns|ACQ Number of Phase Encoding St|thing2|software|ACQ Acquisition Matrix
+
+[ -z "$1" -o ! -r "$1" ] && exit 1
+[ -d "$1" ]  && hinfo $(dcmindir $1) && exit 0
+[ -r "$1" ]  && hinfo $1 && exit 0
+
+
+
+
+cat |tr '\n' '|' <<HEREDOC  
+PAT Patient ID
+PAT Patient Birthdate
+PAT Patient Sex
+ID Study Date
+ID Acquisition Time
+ACQ Protocol Name
+ID Operator's Name
+IMG Pixel Spacing
+ACQ Phase Encoding Direction
+thing1                               
+ACQ Repetition Time
+ACQ Echo Time
+ACQ Flip Angle
+IMG Rows
+IMG Columns
+ACQ Number of Phase Encoding St
+thing2                               
+software
+ACQ Acquisition Matrix
+HEREDOC
